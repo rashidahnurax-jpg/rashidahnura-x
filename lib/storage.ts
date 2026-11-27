@@ -2,9 +2,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
-// archiver v8 is ESM-only and exposes ZipArchive; @types/archiver still describes the v6 callable export.
-// @ts-expect-error runtime named export missing from @types/archiver
-import { ZipArchive } from "archiver";
+import yazl from "yazl";
 import sharp from "sharp";
 import { MEDIA_ROOT, TEMP_ROOT } from "./config";
 
@@ -38,7 +36,7 @@ export function storageAbs(relativePath: string | null | undefined): string | nu
   return abs;
 }
 
-export function bundledAssetUrl(relativePath: string | null | undefined): string | null {
+export function bundledAssetPath(relativePath: string | null | undefined): string | null {
   if (!relativePath) return null;
   const match = /^bundled\/highlights\/(original|preview|thumb)\/(IMG_[A-Za-z0-9_-]+)\.(jpg|jpeg|webp)$/i.exec(
     relativePath,
@@ -49,9 +47,22 @@ export function bundledAssetUrl(relativePath: string | null | undefined): string
       (variant !== "original" && extension.toLowerCase() !== "webp")) {
     return null;
   }
+  const assetRoot = path.resolve(process.cwd(), "assets", "highlights");
+  const assetPath = path.resolve(assetRoot, variant, `${name}.${extension}`);
+  return assetPath.startsWith(`${assetRoot}${path.sep}`) ? assetPath : null;
+}
+
+export function bundledAssetUrl(relativePath: string | null | undefined): string | null {
+  const assetPath = bundledAssetPath(relativePath);
+  if (!assetPath) return null;
+  const match = /^bundled\/highlights\/(original|preview|thumb)\/(IMG_[A-Za-z0-9_-]+)\.(jpg|jpeg|webp)$/i.exec(
+    relativePath ?? "",
+  );
+  if (!match) return null;
+  const [, variant, name, extension] = match;
   const assetBase =
     process.env.NURAX_FLAGSHIP_ASSET_BASE_URL ??
-    "https://raw.githubusercontent.com/rashidahnurax-jpg/rashidahnura-x/main/assets/seed/highlights";
+    "https://raw.githubusercontent.com/rashidahnurax-jpg/rashidahnura-x/main/assets/highlights";
   return `${assetBase}/${variant}/${name}.${extension}`;
 }
 
@@ -213,6 +224,16 @@ export async function serveBundledAsset(
   relativePath: string,
   opts: Omit<FileResponseOptions, "absolutePath">,
 ): Promise<Response> {
+  const localPath = bundledAssetPath(relativePath);
+  if (localPath) {
+    try {
+      await fsp.access(localPath);
+      return serveFile(req, { ...opts, absolutePath: localPath });
+    } catch {
+      // The bundled archive is not included in every serverless deployment.
+    }
+  }
+
   const assetUrl = bundledAssetUrl(relativePath);
   if (!assetUrl) return new Response("Not found", { status: 404 });
 
@@ -273,7 +294,7 @@ export interface ZipEntry {
 }
 
 export function streamingZip(entries: ZipEntry[], zipName: string): Response {
-  const archive = new ZipArchive({ zlib: { level: 6 } });
+  const archive = new yazl.ZipFile();
   const used = new Set<string>();
   for (const entry of entries) {
     let name = entry.name.replace(/[\\/:*?"<>|]/g, "-").trim() || "file";
@@ -287,14 +308,15 @@ export function streamingZip(entries: ZipEntry[], zipName: string): Response {
     }
     used.add(candidate.toLowerCase());
     if (entry.stream) {
-      archive.append(entry.stream, { name: candidate });
+      archive.addReadStream(entry.stream, candidate, entry.size > 0 ? { size: entry.size } : undefined);
     } else if (entry.absolutePath) {
-      archive.file(entry.absolutePath, { name: candidate });
+      archive.addFile(entry.absolutePath, candidate);
     }
   }
-  archive.finalize().catch(() => undefined);
+  archive.end();
+  const outputStream = Readable.from(archive.outputStream as AsyncIterable<Uint8Array>);
 
-  return new Response(Readable.toWeb(archive) as unknown as ReadableStream<Uint8Array>, {
+  return new Response(Readable.toWeb(outputStream) as unknown as ReadableStream<Uint8Array>, {
     headers: {
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; ${encodeFilename(zipName)}`,

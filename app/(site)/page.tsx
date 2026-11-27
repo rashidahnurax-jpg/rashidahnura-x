@@ -41,6 +41,7 @@ export default async function HomePage() {
   const flagshipPhotos = flagshipItems.filter((i) => i.kind === "photo");
   const lead = featured[0];
   const spotlight = featured.find((g) => g.kind === "flagship") ?? lead;
+  const spotlightPreview = spotlight?.kind === "flagship" ? flagshipPhotos.slice(0, 4) : [];
 
   return (
     <>
@@ -161,16 +162,29 @@ export default async function HomePage() {
           <div className="mt-10 grid gap-6 lg:grid-cols-[1.55fr_1fr]">
             <Link
               href={`/g/${spotlight.slug}`}
-              className="group relative overflow-hidden rounded-sm border border-teal-900/10 bg-teal-950"
+              className="group relative min-h-[320px] overflow-hidden rounded-sm border border-teal-900/10 bg-teal-950 md:min-h-[440px]"
             >
-              {spotlight.cover_url ? (
+              {spotlightPreview.length > 0 ? (
+                <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-[2px] bg-cream/30">
+                  {spotlightPreview.map((photo) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={photo.id}
+                      src={`/api/g/${spotlight.slug}/media/${photo.id}/thumb`}
+                      alt={photo.title ?? "A photograph from the flagship gallery"}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]"
+                    />
+                  ))}
+                </div>
+              ) : spotlight.cover_url ? (
                 <img
                   src={spotlight.cover_url}
                   alt={spotlight.title}
-                  className="h-full min-h-[320px] w-full object-cover transition duration-700 group-hover:scale-[1.03] md:min-h-[440px]"
+                  className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
                 />
               ) : (
-                <div className="flex min-h-[320px] items-center justify-center bg-teal-900 md:min-h-[440px]">
+                <div className="absolute inset-0 flex items-center justify-center bg-teal-900">
                   <span className="font-serif text-3xl text-cream/70">{spotlight.title}</span>
                 </div>
               )}
@@ -427,8 +441,17 @@ export default async function HomePage() {
                   </div>
                   <div className="grid grid-cols-3 gap-1.5">
                     <img src="/brand/portrait-1200.jpg" alt="" className="col-span-2 aspect-[4/3] w-full rounded-[2px] object-cover object-top" />
-                    <div className="aspect-[4/3] w-full rounded-[2px] bg-teal-900/90" />
-                    <div className="aspect-[4/3] w-full rounded-[2px] bg-gold/60" />
+                    {flagship &&
+                      flagshipPhotos.slice(1, 3).map((photo) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={photo.id}
+                        src={`/api/g/${flagship.slug}/media/${photo.id}/thumb`}
+                        alt={photo.title ?? "A photograph from the inaugural lecture"}
+                        loading="lazy"
+                        className="aspect-[4/3] w-full rounded-[2px] object-cover"
+                      />
+                    ))}
                     <div className="col-span-2 flex items-center justify-between rounded-[2px] bg-teal-900 px-2">
                       <span className="text-[7px] uppercase tracking-[0.14em] text-cream/60">Selection tray</span>
                       <span className="rounded-full bg-turquoise px-1.5 py-0.5 text-[7px] font-bold text-teal-950">2</span>

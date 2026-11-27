@@ -44,7 +44,7 @@ export function FilmViewer({
   const thumb = item.poster_url ?? item.thumb_url;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-[#041a18]/98 text-cream backdrop-blur" role="dialog" aria-modal="true" aria-label={item.title}>
+    <div className="fixed inset-0 z-[100] flex flex-col bg-[#041a18]/98 text-cream backdrop-blur animate-fadeIn motion-reduce:animate-none" role="dialog" aria-modal="true" aria-label={item.title}>
       <div className="flex items-center justify-between gap-3 border-b border-cream/10 px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-2.5">
           <Film className="h-4 w-4 shrink-0 text-gold" />
@@ -55,15 +55,16 @@ export function FilmViewer({
         <button
           type="button"
           onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-cream/20 text-cream/70 transition hover:border-cream/45 hover:text-cream"
-          aria-label="Close film"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-cream/30 bg-cream/[0.06] px-3 text-cream transition hover:border-turquoise hover:bg-turquoise hover:text-teal-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+          aria-label="Close video player"
         >
           <X className="h-4 w-4" />
+          <span className="text-[9px] font-semibold uppercase tracking-[0.14em]">Close video</span>
         </button>
       </div>
 
       <div className="flex flex-1 items-center justify-center overflow-y-auto px-3 py-4 sm:px-10 sm:py-8">
-        <div className="w-full max-w-5xl">
+        <div className="w-full max-w-5xl animate-fadeUp motion-reduce:animate-none">
           <div className="overflow-hidden rounded-sm border border-cream/10 bg-black shadow-lift">
             <div className="relative aspect-video w-full">
               {item.kind === "youtube" && item.youtube_id ? (

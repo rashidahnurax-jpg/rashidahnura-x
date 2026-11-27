@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Lock, Mail, ShieldCheck } from "lucide-react";
 import { ready } from "@/lib/db";
-import { featuredGalleries } from "@/lib/data";
+import { featuredGalleries, getMediaItems } from "@/lib/data";
 import { AccessBadge } from "@/components/ui/Badges";
 import { formatDate } from "@/lib/format";
 
@@ -15,6 +15,16 @@ export const metadata = {
 export default async function GalleriesPage() {
   await ready();
   const galleries = featuredGalleries(24);
+  const flagshipPreviews = new Map(
+    galleries
+      .filter((gallery) => gallery.kind === "flagship")
+      .map((gallery) => [
+        gallery.id,
+        getMediaItems(gallery.id)
+          .filter((item) => item.kind === "photo")
+          .slice(0, 4),
+      ]),
+  );
 
   return (
     <>
@@ -54,10 +64,24 @@ export default async function GalleriesPage() {
               <Link
                 key={gallery.id}
                 href={`/g/${gallery.slug}`}
-                className="group overflow-hidden rounded-sm border border-teal-900/10 bg-white transition hover:border-gold/50 hover:shadow-lift"
+                className="group overflow-hidden rounded-sm border border-teal-900/10 bg-white transition hover:border-gold/50 hover:shadow-lift animate-fadeUp motion-reduce:animate-none"
+                style={{ animationDelay: `${Math.min(index * 70, 350)}ms` }}
               >
                 <div className="relative overflow-hidden bg-teal-950">
-                  {gallery.cover_url ? (
+                  {flagshipPreviews.get(gallery.id)?.length ? (
+                    <div className="grid aspect-[4/3] grid-cols-2 grid-rows-2 gap-[2px] bg-cream/30">
+                      {flagshipPreviews.get(gallery.id)?.map((photo) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={photo.id}
+                          src={`/api/g/${gallery.slug}/media/${photo.id}/thumb`}
+                          alt={photo.title ?? "A photograph from the flagship gallery"}
+                          loading={index < 3 ? "eager" : "lazy"}
+                          className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]"
+                        />
+                      ))}
+                    </div>
+                  ) : gallery.cover_url ? (
                     <img
                       src={gallery.cover_url}
                       alt={gallery.title}

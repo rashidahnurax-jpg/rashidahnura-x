@@ -342,12 +342,16 @@ export function GalleryPage({
             </div>
 
             <div className="mt-7 grid gap-5 sm:grid-cols-2">
-              {films.map((item) => {
+              {films.map((item, index) => {
                 const poster = item.poster_url ?? item.thumb_url;
                 const allowed = itemCanDownload(gallery, item, true);
                 const size = itemDisplaySize(item);
                 return (
-                  <article key={item.id} className="group overflow-hidden rounded-sm border border-cream/10 bg-cream/[0.03]">
+                  <article
+                    key={item.id}
+                    className="group overflow-hidden rounded-sm border border-cream/10 bg-cream/[0.03] animate-fadeUp motion-reduce:animate-none"
+                    style={{ animationDelay: `${Math.min(index * 90, 360)}ms` }}
+                  >
                     <button
                       type="button"
                       onClick={() => setFilm(item)}
@@ -437,7 +441,12 @@ export function GalleryPage({
           </div>
         ) : (
           chapterSections.map((section, index) => (
-            <section key={section.id} id={section.id} className="scroll-mt-28 py-10 sm:py-12">
+            <section
+              key={section.id}
+              id={section.id}
+              className="scroll-mt-28 py-10 sm:py-12 animate-fadeUp motion-reduce:animate-none"
+              style={{ animationDelay: `${Math.min(index * 80, 320)}ms` }}
+            >
               <div className="mb-5 flex items-end justify-between gap-4 px-1">
                 <div className="flex items-baseline gap-3">
                   <span className="font-mono text-[10px] tracking-[0.2em] text-gold-deep">{String(index + 1).padStart(2, "0")}</span>

@@ -34,7 +34,10 @@ async function seedPhoto(
   fs.mkdirSync(dir, { recursive: true });
   const extension = path.extname(sourceRelative) || ".jpg";
   const originalAbs = path.join(dir, `original${extension}`);
-  fs.copyFileSync(path.join(process.cwd(), sourceRelative), originalAbs);
+  const seedRoot = path.resolve(process.cwd(), "assets", "seed");
+  const sourceAbs = path.resolve(seedRoot, sourceRelative);
+  if (!sourceAbs.startsWith(`${seedRoot}${path.sep}`)) throw new Error("Invalid seed photo path.");
+  fs.copyFileSync(sourceAbs, originalAbs);
   const derivatives = await buildPhotoDerivatives(originalAbs, dir);
   const size = fs.statSync(originalAbs).size;
 
@@ -371,7 +374,7 @@ export async function seedDatabase(db: DatabaseSync): Promise<void> {
       db,
       galleryId,
       entry.chapter,
-      path.join("assets", "seed", entry.file),
+      entry.file,
       entry.title,
       position,
     );
