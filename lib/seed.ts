@@ -13,6 +13,7 @@ const FLAGSHIP_VIDEOS = [
   { title: "JOIN US", id: "KPLLFkyH34s" },
   { title: "CITATION", id: "GWJy8pB6TGE" },
   { title: "WHEN THE MACHINE LEARNS WHY?", id: "WaORQ3mu9GQ" },
+  { title: "THE ARRIVAL AND PROCEEDING OF THE SENATE COUNCIL MEMBERS", id: "hnFLGBoZLHM" },
 ] as const;
 
 function stableSeedId(value: string): string {
