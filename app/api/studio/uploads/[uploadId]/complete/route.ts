@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
+import { MEDIA_ROOT } from "@/lib/config";
 import { db, get, nowIso, ready } from "@/lib/db";
 import { studioUser } from "@/lib/studio";
 import { jsonError, jsonOk, sameOrigin } from "@/lib/http";
@@ -38,7 +39,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ uploadI
   if (session.target === "attachment") {
     const extension = safeExtension(item.original_name ?? "attachment.mp4", "video");
     if (item.attachment_path) {
-      const old = path.resolve(path.join(process.cwd(), "storage", "media"), item.attachment_path);
+      const old = path.resolve(MEDIA_ROOT, item.attachment_path);
       await removeFileQuiet(old);
     }
     const dest = path.join(dir, `attachment${extension}`);

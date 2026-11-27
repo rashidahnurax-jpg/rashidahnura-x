@@ -2,7 +2,10 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-export const STORAGE_ROOT = path.join(process.cwd(), "storage");
+// Vercel functions have a read-only filesystem except /tmp, which is ephemeral per instance.
+export const STORAGE_ROOT =
+  process.env.NURAX_STORAGE_ROOT ??
+  (process.env.VERCEL ? path.join("/tmp", "nurax-storage") : path.join(process.cwd(), "storage"));
 export const MEDIA_ROOT = path.join(STORAGE_ROOT, "media");
 export const TEMP_ROOT = path.join(STORAGE_ROOT, "tmp");
 export const DB_PATH = path.join(STORAGE_ROOT, "nurax.sqlite");
