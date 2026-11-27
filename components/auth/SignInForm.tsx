@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 
 export function SignInForm() {
@@ -88,7 +89,10 @@ export function SignInForm() {
       </button>
 
       <p className="pt-1 text-center text-[11px] text-ink/40">
-        No account? Ask your NURA-X administrator for an invitation link.
+        New to NURA-X?{" "}
+        <Link href="/signup" className="font-semibold text-teal-900 underline underline-offset-2">
+          Create a studio account
+        </Link>
       </p>
     </form>
   );

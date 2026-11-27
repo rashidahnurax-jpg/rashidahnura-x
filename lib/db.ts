@@ -175,6 +175,12 @@ CREATE TABLE IF NOT EXISTS access_attempts (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS signup_attempts (
+  email TEXT NOT NULL,
+  client TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS upload_sessions (
   id TEXT PRIMARY KEY,
   media_id TEXT REFERENCES media_items(id) ON DELETE CASCADE,
@@ -194,6 +200,8 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_downloads_gallery ON downloads(gallery_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_otp_lookup ON otp_codes(gallery_id, email, created_at);
 CREATE INDEX IF NOT EXISTS idx_access_attempts ON access_attempts(gallery_id, kind, client, created_at);
+CREATE INDEX IF NOT EXISTS idx_signup_attempts_email ON signup_attempts(email, created_at);
+CREATE INDEX IF NOT EXISTS idx_signup_attempts_client ON signup_attempts(client, created_at);
 `;
 
 async function initialize(): Promise<void> {
