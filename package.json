@@ -1,0 +1,34 @@
+{
+  "name": "nura-x-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NURA-X STUDIO — intentional galleries for photographers and studios.",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "seed:reset": "node scripts/reset-seed.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.2.8",
+    "archiver": "^8.0.0",
+    "lucide-react": "^0.545.0",
+    "next": "15.5.29",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "puppeteer-core": "^24.0.0",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.0"
+  }
+}

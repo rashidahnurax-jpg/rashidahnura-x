@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+dist
+storage
+.env*.local
+.env
+*.log
+.DS_Store
+vibe_images
+test-artifacts
+next-env.d.ts
+*.tsbuildinfo
+scripts/qa-mobile-isolated.mjs
