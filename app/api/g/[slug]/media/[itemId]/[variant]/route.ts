@@ -3,7 +3,7 @@ import { db, get, nowIso, ready } from "@/lib/db";
 import { evaluateAccess, getGalleryBySlug, isOwnerOrAdmin } from "@/lib/access";
 import { getCurrentUser } from "@/lib/auth";
 import { isExpired } from "@/lib/format";
-import { mimeForName, serveFile, storageAbs } from "@/lib/storage";
+import { bundledAssetUrl, mimeForName, serveBundledAsset, serveFile, storageAbs } from "@/lib/storage";
 import type { MediaItemRow } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -57,12 +57,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   if (variant !== "file") {
     const relative =
       variant === "thumb" ? item.thumb_path : variant === "preview" ? item.preview_path : item.poster_path;
+    if (bundledAssetUrl(relative)) {
+      return serveBundledAsset(req, relative!, {
+        mime: mimeForName(relative!),
+        filename: relative!.split("/").pop() ?? `${gallery.slug}-${variant}`,
+        inline: true,
+        cacheControl: "private, no-store",
+      });
+    }
     const abs = storageAbs(relative);
     if (!abs) return deny(404, "not_found");
     return serveFile(req, {
       absolutePath: abs,
-      mime: "image/webp",
-      filename: `${gallery.slug}-${variant}.webp`,
+      mime: mimeForName(abs),
+      filename: relative?.split("/").pop() ?? `${gallery.slug}-${variant}`,
       inline: true,
       cacheControl: "private, no-store",
     });
@@ -79,14 +87,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   }
 
   const relative = item.kind === "youtube" ? item.attachment_path : item.storage_path;
-  const abs = storageAbs(relative);
-  if (!abs) return deny(404, "no_original");
-
   const ext = relative?.match(/\.[a-z0-9]{1,8}$/i)?.[0] ?? "";
   const downloadName =
     item.original_name || item.attachment_name || `${(item.title || "film").replace(/[\\/:*?"<>|]/g, "-")}${ext}`;
-
-  if (!inline) {
+  const recordDownload = () => {
     db.prepare(
       "INSERT INTO downloads (id, gallery_id, item_id, email, kind, bytes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     ).run(
@@ -98,7 +102,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       Number(item.size_bytes ?? item.attachment_size ?? 0),
       nowIso(),
     );
+  };
+
+  if (bundledAssetUrl(relative)) {
+    const response = await serveBundledAsset(req, relative!, {
+      mime: item.mime || mimeForName(relative!),
+      filename: downloadName,
+      inline,
+      cacheControl: "private, no-store",
+    });
+    if (!inline && response.ok) recordDownload();
+    return response;
   }
+  const abs = storageAbs(relative);
+  if (!abs) return deny(404, "no_original");
+
+  if (!inline) recordDownload();
 
   return serveFile(req, {
     absolutePath: abs,

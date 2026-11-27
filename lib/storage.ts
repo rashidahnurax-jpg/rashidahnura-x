@@ -38,6 +38,23 @@ export function storageAbs(relativePath: string | null | undefined): string | nu
   return abs;
 }
 
+export function bundledAssetUrl(relativePath: string | null | undefined): string | null {
+  if (!relativePath) return null;
+  const match = /^bundled\/highlights\/(original|preview|thumb)\/(IMG_[A-Za-z0-9_-]+)\.(jpg|jpeg|webp)$/i.exec(
+    relativePath,
+  );
+  if (!match) return null;
+  const [, variant, name, extension] = match;
+  if ((variant === "original" && !["jpg", "jpeg"].includes(extension.toLowerCase())) ||
+      (variant !== "original" && extension.toLowerCase() !== "webp")) {
+    return null;
+  }
+  const assetBase =
+    process.env.NURAX_FLAGSHIP_ASSET_BASE_URL ??
+    "https://raw.githubusercontent.com/rashidahnurax-jpg/rashidahnura-x/main/assets/seed/highlights";
+  return `${assetBase}/${variant}/${name}.${extension}`;
+}
+
 export function relativeMediaPath(abs: string): string {
   return path.relative(MEDIA_ROOT, abs).split(path.sep).join("/");
 }
@@ -191,8 +208,66 @@ export async function serveFile(req: Request, opts: FileResponseOptions): Promis
   });
 }
 
+export async function serveBundledAsset(
+  req: Request,
+  relativePath: string,
+  opts: Omit<FileResponseOptions, "absolutePath">,
+): Promise<Response> {
+  const assetUrl = bundledAssetUrl(relativePath);
+  if (!assetUrl) return new Response("Not found", { status: 404 });
+
+  let upstream: Response;
+  try {
+    const headers = new Headers();
+    const range = req.headers.get("range");
+    if (range) headers.set("range", range);
+    upstream = await fetch(new URL(assetUrl, req.url), { headers, cache: "no-store" });
+  } catch {
+    return new Response("Gallery asset is temporarily unavailable.", { status: 502 });
+  }
+
+  if (!upstream.ok || !upstream.body) {
+    return new Response("Gallery asset not found.", { status: upstream.status === 404 ? 404 : 502 });
+  }
+
+  const headers = new Headers({
+    "Content-Type": upstream.headers.get("content-type") || opts.mime || "application/octet-stream",
+    "Cache-Control": opts.cacheControl ?? "private, no-store",
+    "Content-Disposition": `${opts.inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(opts.filename)}`,
+    "X-Content-Type-Options": "nosniff",
+  });
+  for (const name of ["accept-ranges", "content-length", "content-range"]) {
+    const value = upstream.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  return new Response(upstream.body, { status: upstream.status, headers });
+}
+
+export function nodeReadableFromWeb(stream: ReadableStream<Uint8Array>): Readable {
+  return Readable.from(
+    (async function* () {
+      const reader = stream.getReader();
+      let completed = false;
+      try {
+        while (true) {
+          const result = await reader.read();
+          if (result.done) {
+            completed = true;
+            break;
+          }
+          yield result.value;
+        }
+      } finally {
+        if (!completed) await reader.cancel().catch(() => undefined);
+        reader.releaseLock();
+      }
+    })(),
+  );
+}
+
 export interface ZipEntry {
-  absolutePath: string;
+  absolutePath?: string;
+  stream?: Readable;
   name: string;
   size: number;
 }
@@ -211,7 +286,11 @@ export function streamingZip(entries: ZipEntry[], zipName: string): Response {
       i += 1;
     }
     used.add(candidate.toLowerCase());
-    archive.file(entry.absolutePath, { name: candidate });
+    if (entry.stream) {
+      archive.append(entry.stream, { name: candidate });
+    } else if (entry.absolutePath) {
+      archive.file(entry.absolutePath, { name: candidate });
+    }
   }
   archive.finalize().catch(() => undefined);
 

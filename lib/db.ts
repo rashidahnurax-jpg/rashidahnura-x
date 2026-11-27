@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import { DB_PATH, MEDIA_ROOT, STORAGE_ROOT, TEMP_ROOT } from "./config";
-import { seedDatabase, seedProductionAdmin } from "./seed";
+import { ensureFlagshipContent, seedDatabase, seedProductionAdmin } from "./seed";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -212,6 +212,7 @@ async function initialize(): Promise<void> {
       await seedDatabase(db);
     }
   }
+  await ensureFlagshipContent(db);
   db.prepare("DELETE FROM sessions WHERE expires_at < ?").run(new Date().toISOString());
 }
 

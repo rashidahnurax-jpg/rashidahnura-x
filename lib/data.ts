@@ -44,7 +44,7 @@ export function mapGalleryCard(gallery: GalleryRow & { studio_name?: string; ite
 }
 
 const CARD_SELECT = `
-  SELECT g.*, u.name AS studio_name,
+  SELECT g.*, CASE WHEN u.role = 'admin' THEN 'NURA-X STUDIO' ELSE u.name END AS studio_name,
     (SELECT COUNT(*) FROM media_items m WHERE m.gallery_id = g.id AND m.status = 'ready') AS item_count,
     (SELECT COUNT(*) FROM media_items m WHERE m.gallery_id = g.id AND m.status = 'ready' AND m.kind = 'photo') AS photo_count,
     (SELECT COUNT(*) FROM media_items m WHERE m.gallery_id = g.id AND m.status = 'ready' AND m.kind IN ('video','youtube')) AS video_count
@@ -212,5 +212,7 @@ export function publicItemsFor(gallery: GalleryRow, items: MediaItemRow[]): Publ
 }
 
 export function studioName(studioId: string): string {
-  return get<{ name: string }>("SELECT name FROM users WHERE id = ?", studioId)?.name ?? "Studio";
+  const owner = get<{ name: string; role: string }>("SELECT name, role FROM users WHERE id = ?", studioId);
+  if (owner?.role === "admin") return "NURA-X STUDIO";
+  return owner?.name ?? "Studio";
 }

@@ -5,7 +5,14 @@ import { evaluateAccess, getGalleryBySlug, isOwnerOrAdmin } from "@/lib/access";
 import { getCurrentUser } from "@/lib/auth";
 import { jsonError, readJson, sameOrigin } from "@/lib/http";
 import { isExpired, slugify } from "@/lib/format";
-import { fileSize, storageAbs, streamingZip, type ZipEntry } from "@/lib/storage";
+import {
+  bundledAssetUrl,
+  fileSize,
+  nodeReadableFromWeb,
+  storageAbs,
+  streamingZip,
+  type ZipEntry,
+} from "@/lib/storage";
 import type { MediaItemRow } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -43,6 +50,37 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     if (item.kind === "photo" && !gallery.allow_photo_downloads) continue;
     if (item.kind !== "photo" && !gallery.allow_video_downloads) continue;
     const relative = item.kind === "youtube" ? item.attachment_path : item.storage_path;
+    const bundledUrl = bundledAssetUrl(relative);
+    if (bundledUrl) {
+      const localPath = storageAbs(relative);
+      const localSize = fileSize(localPath);
+      if (localPath && localSize) {
+        const ext = path.extname(relative ?? "");
+        const name = item.original_name || `${(item.title || `nurax-${entries.length + 1}`).replace(/[\\/:*?"<>|]/g, "-")}${ext}`;
+        entries.push({ absolutePath: localPath, name, size: localSize });
+        total += localSize;
+        continue;
+      }
+
+      let response: Response;
+      try {
+        response = await fetch(new URL(bundledUrl, req.url), { cache: "no-store" });
+      } catch {
+        for (const entry of entries) entry.stream?.destroy();
+        return jsonError("A selected gallery photo could not be retrieved.", 502);
+      }
+      if (!response.ok || !response.body) {
+        for (const entry of entries) entry.stream?.destroy();
+        return jsonError("A selected gallery photo could not be retrieved.", 502);
+      }
+      const ext = path.extname(relative ?? "");
+      const name = item.original_name || `${(item.title || `nurax-${entries.length + 1}`).replace(/[\\/:*?"<>|]/g, "-")}${ext}`;
+      const size = Number(item.size_bytes) || Number(response.headers.get("content-length")) || 0;
+      entries.push({ stream: nodeReadableFromWeb(response.body), name, size });
+      total += size;
+      continue;
+    }
+
     const abs = storageAbs(relative);
     if (!abs) continue;
     const ext = path.extname(relative ?? "") || "";
